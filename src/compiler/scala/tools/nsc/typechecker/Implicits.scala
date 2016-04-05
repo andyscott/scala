@@ -442,15 +442,16 @@ trait Implicits {
       // which will fail the entire stack of implicit searches, producing a nice error message provided by the programmer
       (context.openImplicits find { case OpenImplicit(info, tp, tree1) => !info.sym.isMacro && tree1.symbol == tree.symbol && dominates(pt, tp)}) match {
          case Some(pending) =>
-           //println("Pending implicit "+pending+" dominates "+pt+"/"+undetParams) //@MDEBUG
+          println("Pending implicit "+pending+" dominates "+pt+"/"+undetParams) //@MDEBUG
            DivergentSearchFailure
          case None =>
            try {
              context.openImplicits = OpenImplicit(info, pt, tree) :: context.openImplicits
-             // println("  "*context.openImplicits.length+"typed implicit "+info+" for "+pt) //@MDEBUG
+             println("  "*context.openImplicits.length+"typed implicit "+info+" for "+pt) //@MDEBUG
+             println("  "*context.openImplicits.length+"tree: " + showCode(tree) + " @ " + tree.pos)
              val result = typedImplicit0(info, ptChecked, isLocalToCallsite)
              if (result.isDivergent) {
-               //println("DivergentImplicit for pt:"+ pt +", open implicits:"+context.openImplicits) //@MDEBUG
+               println("DivergentImplicit for pt:"+ pt +", open implicits:"+context.openImplicits) //@MDEBUG
                if (context.openImplicits.tail.isEmpty && !pt.isErroneous)
                  DivergingImplicitExpansionError(tree, pt, info.sym)(context)
              }
