@@ -13,11 +13,10 @@ class ScriptedTest {
     // same as by service discovery
     //new ScriptEngineManager().getEngineByName("scala").asInstanceOf[ScriptEngine with Compilable]
 
-  // scripted, but also -Yno-predef -Yno-imports
+  // scripted, but also -Ypredef is cleared
   def scriptedNoNothing: ScriptEngine with Compilable = {
     val settings = new Settings()
-    settings.noimports.value = true
-    settings.nopredef.value = true
+    settings.Ypredef.clear()
     Scripted(settings = settings)
   }
 
@@ -75,7 +74,7 @@ class ScriptedTest {
       |for all good
       |dogs to come for supper.""".stripMargin
     val in     = new StringReader(text)
-        
+
     val code =
     """var s: String = _
       |var i: Int = 0
