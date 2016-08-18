@@ -41,6 +41,7 @@ private[reflect] class Settings extends MutableSettings {
   val Yshowsymkinds     = new BooleanSetting(false)
   val breakCycles       = new BooleanSetting(false)
   val debug             = new BooleanSetting(false)
+  val Ypredef           = new MultiStringSetting(List("java.lang", "scala", "scala.Predef"))
   val developer         = new BooleanSetting(false)
   val explaintypes      = new BooleanSetting(false)
   val overrideObjects   = new BooleanSetting(false)
