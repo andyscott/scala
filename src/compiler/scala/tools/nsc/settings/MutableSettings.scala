@@ -230,7 +230,7 @@ class MutableSettings(val errorFn: String => Unit)
     )
   def IntSetting(name: String, descr: String, default: Int, range: Option[(Int, Int)], parser: String => Option[Int]) =
     add(new IntSetting(name, descr, default, range, parser))
-  def MultiStringSetting(name: String, arg: String, descr: String) = add(new MultiStringSetting(name, arg, descr))
+  def MultiStringSetting(name: String, arg: String, descr: String, default: List[String] = Nil) = add(new MultiStringSetting(name, arg, descr, default))
   def MultiChoiceSetting[E <: MultiChoiceEnumeration](name: String, helpArg: String, descr: String, domain: E, default: Option[List[String]] = None) =
     add(new MultiChoiceSetting[E](name, helpArg, descr, domain, default))
   def OutputSetting(outputDirs: OutputDirs, default: String) = add(new OutputSetting(outputDirs, default))
@@ -775,14 +775,16 @@ class MutableSettings(val errorFn: String => Unit)
   class MultiStringSetting private[nsc](
     name: String,
     val arg: String,
-    descr: String)
+    descr: String,
+    default: List[String])
   extends Setting(name, descr) with Clearable {
     type T = List[String]
-    protected var v: T = Nil
+    protected var v: T = default
     def appendToValue(str: String) = value ++= List(str)
 
     // try to set. halting means halt at first non-arg
     protected def tryToSetArgs(args: List[String], halting: Boolean) = {
+      if (!setByUser) clear()
       def loop(args: List[String]): List[String] = args match {
         case arg :: rest => if (halting && (arg startsWith "-")) args else { appendToValue(arg) ; loop(rest) }
         case Nil         => Nil

@@ -37,12 +37,6 @@ trait Contexts { self: Analyzer =>
     override def firstImport: Option[ImportInfo] = None
     override def toString = "NoContext"
   }
-  private object RootImports {
-    // Possible lists of root imports
-    val javaList         = JavaLangPackage :: Nil
-    val javaAndScalaList = JavaLangPackage :: ScalaPackage :: Nil
-    val completeList     = JavaLangPackage :: ScalaPackage :: PredefModule :: Nil
-  }
 
   def ambiguousImports(imp1: ImportInfo, imp2: ImportInfo) =
     LookupAmbiguous(s"it is imported twice in the same scope by\n$imp1\nand $imp2")
@@ -76,26 +70,34 @@ trait Contexts { self: Analyzer =>
 
   var lastAccessCheckDetails: String = ""
 
-  /** List of symbols to import from in a root context.  Typically that
-   *  is `java.lang`, `scala`, and [[scala.Predef]], in that order.  Exceptions:
+  lazy val rootImportPackages: List[Symbol] =
+    settings.Ypredef.value.map(path => rootMirror.getPackage(path))
+
+  /** List of symbols to import from in a root context
    *
-   *  - if option `-Yno-imports` is given, nothing is imported
    *  - if the unit is java defined, only `java.lang` is imported
-   *  - if option `-Yno-predef` is given, if the unit body has an import of Predef
-   *    among its leading imports, or if the tree is [[scala.Predef]], `Predef` is not imported.
+   *  - otherwise, values from `-Ypredef` are imported.
+   *  - if a file explicitly imports a given predef, the value is not imported
+   *    an additional time
    */
   protected def rootImports(unit: CompilationUnit): List[Symbol] = {
     assert(definitions.isDefinitionsInitialized, "definitions uninitialized")
 
-    if (settings.noimports) Nil
-    else if (unit.isJava) RootImports.javaList
-    else if (settings.nopredef || treeInfo.noPredefImportForUnit(unit.body)) {
-      // SI-8258 Needed for the presentation compiler using -sourcepath, otherwise cycles can occur. See the commit
-      //         message for this ticket for an example.
-      debuglog("Omitted import of Predef._ for " + unit)
-      RootImports.javaAndScalaList
+    if (unit.isJava) JavaLangPackage :: Nil
+    else {
+      def isAlreadyImported(searchSymbol: Symbol, tree: Tree):Boolean = tree match {
+        case PackageDef(pid, stats) => stats.exists {
+          case Import(expr, _) =>
+            val res = expr.symbol == searchSymbol
+            if (res) debuglog(s"Omitted import of $expr._ for $unit")
+            res
+          case _ => false
+        }
+        case _ => false
+      }
+
+      rootImportPackages.filterNot(isAlreadyImported(_, unit.body))
     }
-    else RootImports.completeList
   }
 
 

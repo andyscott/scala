@@ -123,14 +123,11 @@ package object interpreter extends ReplConfig with ReplStrings {
           }
           p("")
       }
-      
-      if (filtered.nonEmpty) 
-        "" // side-effects above
-      else if (global.settings.nopredef || global.settings.noimports) 
-        "No implicits have been imported."
-      else
-        "No implicits have been imported other than those in Predef." 
 
+      if (filtered.nonEmpty)
+        "" // side-effects above
+      else
+        "No implicits have been imported other than " + global.settings.Ypredef.value.mkString(", ")
     }
 
     def kindCommandInternal(expr: String, verbose: Boolean): Unit = {

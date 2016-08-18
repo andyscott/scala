@@ -1,0 +1,4 @@
+C_1.scala:2: error: not found: type String
+  val foo: String = "Hello"
+           ^
+one error found
