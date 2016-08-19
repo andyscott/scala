@@ -1,2 +1,2 @@
-error: Deprecated flag -Yno-predef isn't supported with -Ypredef
+error: Flag -Yno-predef can not be used in conjunction with flag -Ypredef
 one error found
