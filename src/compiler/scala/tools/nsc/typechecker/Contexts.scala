@@ -70,8 +70,19 @@ trait Contexts { self: Analyzer =>
 
   var lastAccessCheckDetails: String = ""
 
-  lazy val rootImportPackages: List[Symbol] =
-    settings.Ypredef.value.map(path => rootMirror.getPackage(path))
+  lazy val rootImportPackages: List[Symbol] = {
+    val paths =
+      if (settings.Ypredef.isSetByUser) {
+        if (settings.nopredef) error("Deprecated flag -Yno-predef isn't supported with -Ypredef")
+        if (settings.noimports) error("Deprecated flag -Yno-imports isn't supported with -Ypredef")
+        settings.Ypredef.value
+      }
+      else if (settings.noimports) Nil
+      else if (settings.nopredef) settings.Ypredef.value.filterNot(_ == "scala.Predef")
+      else settings.Ypredef.value
+
+    paths.map(path => rootMirror.getPackage(path))
+  }
 
   /** List of symbols to import from in a root context
    *
