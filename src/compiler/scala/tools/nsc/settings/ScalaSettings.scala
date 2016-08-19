@@ -189,6 +189,8 @@ trait ScalaSettings extends AbsScalaSettings
   val Ylogcp          = BooleanSetting    ("-Ylog-classpath", "Output information about what classpath is being applied.")
   val Ynogenericsig   = BooleanSetting    ("-Yno-generic-signatures", "Suppress generation of generic signatures for Java.")
   val Ypredef         = MultiStringSetting("-Ypredef", "package", "Supply a list of packages/objects to be imported into the global scope", List("java.lang", "scala", "scala.Predef"))
+  val noimports       = BooleanSetting    ("-Yno-imports", "Deprecated. Compile without importing scala.*, java.lang.*, or Predef.")
+  val nopredef        = BooleanSetting    ("-Yno-predef", "Deprecated. Compile without importing Predef.")
   val noAdaptedArgs   = BooleanSetting    ("-Yno-adapted-args", "Do not adapt an argument list (either by inserting () or creating a tuple) to match the receiver.")
   val Yrecursion      = IntSetting        ("-Yrecursion", "Set recursion depth used when locking symbols.", 0, Some((0, Int.MaxValue)), (_: String) => None)
   val Xshowtrees      = BooleanSetting    ("-Yshow-trees", "(Requires -Xprint:) Print detailed ASTs in formatted form.")
