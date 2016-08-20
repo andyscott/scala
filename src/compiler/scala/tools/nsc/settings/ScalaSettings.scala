@@ -173,7 +173,7 @@ trait ScalaSettings extends AbsScalaSettings
   val Ylogcp          = BooleanSetting    ("-Ylog-classpath", "Output information about what classpath is being applied.")
   val Ynogenericsig   = BooleanSetting    ("-Yno-generic-signatures", "Suppress generation of generic signatures for Java.")
 
-  val Ypredef: MultiStringSetting = MultiStringSetting("-Ypredef", "package", "Supply a list of packages/objects to be imported into the global scope", List("java.lang", "scala", "scala.Predef"))
+  val Ypredef: MultiStringSetting = MultiStringSetting("-Ypredef", "package", "Supply a list of packages/objects to be imported into the global scope", List("java.lang._", "scala._", "scala.Predef._"))
     .withPostSetHook(s => {
       requireExclusiveUse(noimports)(s)
       requireExclusiveUse(nopredef)(s) })
