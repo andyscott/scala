@@ -1,0 +1,6 @@
+object Test {
+  val t: Throwable = ???
+  val s: STRING    = ???
+  val l: LIST[_]   = ???
+  val m: Map[_, _] = ???
+}
