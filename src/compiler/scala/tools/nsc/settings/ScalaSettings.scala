@@ -190,15 +190,19 @@ trait ScalaSettings extends AbsScalaSettings
   val Ynogenericsig   = BooleanSetting    ("-Yno-generic-signatures", "Suppress generation of generic signatures for Java.")
 
   val Ypredef: MultiStringSetting = MultiStringSetting("-Ypredef", "package", "Supply a list of packages/objects to be imported into the global scope", List("java.lang._", "scala._", "scala.Predef._"))
-    .withPostSetHook(s => {
-      requireExclusiveUse(noimports)(s)
-      requireExclusiveUse(nopredef)(s) })
+    .withPostSetHook(postSetExclusive(noimports, nopredef))
   val noimports: BooleanSetting = BooleanSetting("-Yno-imports", "Compile without importing scala.*, java.lang.*, or Predef.")
     .withDeprecationMessage(replacedByYpredef)
-    .withPostSetHook(requireExclusiveUse(Ypredef))
+    .withPostSetHook { s =>
+      postSetExclusive(Ypredef)(s)
+      Ypredef setNoHook Nil }
   val nopredef: BooleanSetting = BooleanSetting("-Yno-predef", "Compile without importing Predef.")
     .withDeprecationMessage(replacedByYpredef)
-    .withPostSetHook(requireExclusiveUse(Ypredef))
+    .withPostSetHook { s =>
+      postSetExclusive(Ypredef)(s)
+      Ypredef setNoHook Ypredef.value.filterNot(_ == "scala.Predef._") }
+
+
 
   val noAdaptedArgs   = BooleanSetting    ("-Yno-adapted-args", "Do not adapt an argument list (either by inserting () or creating a tuple) to match the receiver.")
   val Yrecursion      = IntSetting        ("-Yrecursion", "Set recursion depth used when locking symbols.", 0, Some((0, Int.MaxValue)), (_: String) => None)
@@ -337,10 +341,9 @@ trait ScalaSettings extends AbsScalaSettings
 
   private def replacedByYpredef = "This flag is slated for removal. Its behavior can be achieved with the more generic -Ypredef flag."
 
-  private def requireExclusiveUse(peer: Setting): (Setting) => Unit = { s =>
-    if (peer.isSetByUser)
-      errorFn(s"Flag ${s.name} can not be used in conjunction with flag ${peer.name}")
-  }
+  private def postSetExclusive(peers: Setting*)(s: Setting): Unit =
+    peers.find(_.isSetByUser).foreach(peer =>
+      errorFn(s"Flag ${s.name} can not be used in conjunction with flag ${peer.name}"))
 
   object YstatisticsPhases extends MultiChoiceEnumeration { val parser, typer, patmat, erasure, cleanup, jvm = Value }
   val Ystatistics = {
