@@ -141,7 +141,8 @@ class MutableSettings(val errorFn: String => Unit)
       } else {
         for {
           (p, args) <- StringOps.splitWhere(s, _ == ':', doDropIndex = true)
-          rest      <- tryToSetIfExists(p, (args split ",").toList, (s: Setting) => s.tryToSetColon _)
+          delimiter <- lookupSetting(p).map(_.delimiter)
+          rest      <- tryToSetIfExists(p, (args split delimiter).toList, (s: Setting) => s.tryToSetColon _)
         } yield rest
       }
 
@@ -230,7 +231,7 @@ class MutableSettings(val errorFn: String => Unit)
     )
   def IntSetting(name: String, descr: String, default: Int, range: Option[(Int, Int)], parser: String => Option[Int]) =
     add(new IntSetting(name, descr, default, range, parser))
-  def MultiStringSetting(name: String, arg: String, descr: String, default: List[String] = Nil) = add(new MultiStringSetting(name, arg, descr, default))
+  def MultiStringSetting(name: String, arg: String, descr: String, default: List[String] = Nil, delimiter: Char = ',') = add(new MultiStringSetting(name, arg, descr, default, delimiter))
   def MultiChoiceSetting[E <: MultiChoiceEnumeration](name: String, helpArg: String, descr: String, domain: E, default: Option[List[String]] = None) =
     add(new MultiChoiceSetting[E](name, helpArg, descr, domain, default))
   def OutputSetting(outputDirs: OutputDirs, default: String) = add(new OutputSetting(outputDirs, default))
@@ -384,6 +385,10 @@ class MutableSettings(val errorFn: String => Unit)
     private var _deprecationMessage: Option[String] = None
     override def deprecationMessage = _deprecationMessage
     def withDeprecationMessage(msg: String): this.type = { _deprecationMessage = Some(msg) ; this }
+
+    /** If the setting is parsed from multiple arguments, this is used as
+      * a delimiter. */
+    def delimiter: Char = ','
   }
 
   /** A setting represented by an integer. */
@@ -711,7 +716,7 @@ class MutableSettings(val errorFn: String => Unit)
 
     def tryToSet(args: List[String])                  = tryToSetArgs(args, halting = true)
     override def tryToSetColon(args: List[String])    = tryToSetArgs(args, halting = false)
-    override def tryToSetFromPropertyValue(s: String) = tryToSet(s.trim.split(',').toList) // used from ide
+    override def tryToSetFromPropertyValue(s: String) = tryToSet(s.trim.split(delimiter).toList) // used from ide
 
     /** Try to set args, handling "help" and default.
      *  The "halting" parameter means args were "-option a b c -else" so halt
@@ -776,7 +781,8 @@ class MutableSettings(val errorFn: String => Unit)
     name: String,
     val arg: String,
     descr: String,
-    default: List[String])
+    default: List[String],
+    override val delimiter: Char)
   extends Setting(name, descr) with Clearable {
     type T = List[String]
     protected var v: T = default
@@ -793,7 +799,7 @@ class MutableSettings(val errorFn: String => Unit)
     }
     def tryToSet(args: List[String])                  = tryToSetArgs(args, halting = true)
     override def tryToSetColon(args: List[String])    = tryToSetArgs(args, halting = false)
-    override def tryToSetFromPropertyValue(s: String) = tryToSet(s.trim.split(',').toList) // used from ide
+    override def tryToSetFromPropertyValue(s: String) = tryToSet(s.trim.split(delimiter).toList) // used from ide
 
     // sets the value without triggering postSaveHook
     private[nsc] def setNoHook(value: List[String]): Unit = (v = value)

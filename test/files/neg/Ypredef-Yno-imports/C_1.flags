@@ -1,2 +1,2 @@
--Ypredef:scala
+-Ypredef:scala._
 -Yno-imports
