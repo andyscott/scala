@@ -795,6 +795,9 @@ class MutableSettings(val errorFn: String => Unit)
     override def tryToSetColon(args: List[String])    = tryToSetArgs(args, halting = false)
     override def tryToSetFromPropertyValue(s: String) = tryToSet(s.trim.split(',').toList) // used from ide
 
+    // sets the value without triggering postSaveHook
+    private[nsc] def setNoHook(value: List[String]): Unit = (v = value)
+
     def clear(): Unit         = (v = Nil)
     def unparse: List[String] = value map (name + ":" + _)
     def contains(s: String)   = value contains s

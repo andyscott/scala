@@ -70,15 +70,8 @@ trait Contexts { self: Analyzer =>
 
   var lastAccessCheckDetails: String = ""
 
-  lazy val generalRootImports: List[Import] = {
-
-    val paths =
-      if (settings.Ypredef.isSetByUser) settings.Ypredef.value
-      else if (settings.noimports) Nil
-      else if (settings.nopredef) settings.Ypredef.value.filterNot(_ == "scala.Predef._")
-      else settings.Ypredef.value
-
-    paths
+  lazy val generalRootImports: List[Import] =
+    settings.Ypredef.value
       .map(global.newUnitParser(_, "<flag-Ypredef>").parseRule(_.importExpr()))
       .collect { case imp: Import =>
         // I can't seem to figure out how to use the freshly parsed tree...
@@ -86,7 +79,6 @@ trait Contexts { self: Analyzer =>
         gen.mkImportFromSelector(
           rootMirror.getPackage(imp.expr.toString), imp.selectors)
         }
-  }
 
   /** List of imports for a unit's root context
    *
@@ -159,7 +151,7 @@ trait Contexts { self: Analyzer =>
   }
 
   /**
-   * A motley collection of the state and loosely assocrated behaviour of the type checker.
+   * A motley collection of the state and loosely associated behaviour of the type checker.
    * Each `Typer` has an associated context, and as it descends into the tree new `(Typer, Context)`
    * pairs are spawned.
    *
