@@ -70,46 +70,63 @@ trait Contexts { self: Analyzer =>
 
   var lastAccessCheckDetails: String = ""
 
-  lazy val rootImportPackages: List[Symbol] = {
+  lazy val generalRootImports: List[Import] = {
+
     val paths =
       if (settings.Ypredef.isSetByUser) settings.Ypredef.value
       else if (settings.noimports) Nil
-      else if (settings.nopredef) settings.Ypredef.value.filterNot(_ == "scala.Predef")
+      else if (settings.nopredef) settings.Ypredef.value.filterNot(_ == "scala.Predef._")
       else settings.Ypredef.value
 
-    paths.map(path => rootMirror.getPackage(path))
+    paths
+      .map(global.newUnitParser(_, "<flag-Ypredef>").parseRule(_.importExpr()))
+      .collect { case imp: Import =>
+        // I can't seem to figure out how to use the freshly parsed tree...
+        // Instead we get to recreate it
+        gen.mkImportFromSelector(
+          rootMirror.getPackage(imp.expr.toString), imp.selectors)
+        }
   }
 
-  /** List of symbols to import from in a root context
+  /** List of imports for a unit's root context
    *
    *  - if the unit is java defined, only `java.lang` is imported
    *  - otherwise, values from `-Ypredef` are imported.
    *  - if a file explicitly imports a given predef, the value is not imported
    *    an additional time
    */
-  protected def rootImports(unit: CompilationUnit): List[Symbol] = {
+  protected def rootImports(unit: CompilationUnit): List[Import] = {
     assert(definitions.isDefinitionsInitialized, "definitions uninitialized")
 
-    if (unit.isJava) JavaLangPackage :: Nil
+    if (unit.isJava) gen.mkWildcardImport(JavaLangPackage) :: Nil
     else {
-      def isAlreadyImported(searchSymbol: Symbol, tree: Tree):Boolean = tree match {
-        case PackageDef(pid, stats) => stats.exists {
-          case Import(expr, _) =>
-            val res = expr.symbol == searchSymbol
-            if (res) debuglog(s"Omitted import of $expr._ for $unit")
-            res
-          case _ => false
-        }
-        case _ => false
+
+      /** Cleanup import `imp` such that any selectors covered by
+        * any imports in `parents` are removed.
+        */
+      def dedupe(imp: Import, parents: List[Import]): Option[Import] = {
+        val parentsToCheck = parents.filter(parent =>
+          parent.expr equalsStructure imp.expr)
+        val selectors = imp.selectors.filterNot(rs =>
+          parentsToCheck.exists(_.selectors.exists(ps =>
+            ps.name == rs.name && ps.rename == rs.rename)))
+
+        if (selectors.isEmpty) None
+        else Some(imp.copy(selectors = selectors).copyAttrs(imp))
       }
 
-      rootImportPackages.filterNot(isAlreadyImported(_, unit.body))
+      unit.body match {
+        case PackageDef(pid, stats) =>
+          val imps = stats.collect { case imp: Import => imp }
+          generalRootImports.flatMap(dedupe(_, imps))
+
+        case _ => generalRootImports
+      }
     }
   }
 
-
   def rootContext(unit: CompilationUnit, tree: Tree = EmptyTree, throwing: Boolean = false, checking: Boolean = false): Context = {
-    val rootImportsContext = (startContext /: rootImports(unit))((c, sym) => c.make(gen.mkWildcardImport(sym)))
+    val rootImportsContext = (startContext /: rootImports(unit))((c, imp) => c.make(imp))
 
     // there must be a scala.xml package when xml literals were parsed in this unit
     if (unit.hasXml && ScalaXmlPackage == NoSymbol)
@@ -142,7 +159,7 @@ trait Contexts { self: Analyzer =>
   }
 
   /**
-   * A motley collection of the state and loosely associated behaviour of the type checker.
+   * A motley collection of the state and loosely assocrated behaviour of the type checker.
    * Each `Typer` has an associated context, and as it descends into the tree new `(Typer, Context)`
    * pairs are spawned.
    *
