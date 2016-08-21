@@ -70,16 +70,6 @@ trait Contexts { self: Analyzer =>
 
   var lastAccessCheckDetails: String = ""
 
-  lazy val generalRootImports: List[Import] =
-    settings.Ypredef.value
-      .map(global.newUnitParser(_, "<flag-Ypredef>").parseRule(_.importExpr()))
-      .collect { case imp: Import =>
-        // I can't seem to figure out how to use the freshly parsed tree...
-        // Instead we get to recreate it
-        gen.mkImportFromSelector(
-          rootMirror.getPackage(imp.expr.toString), imp.selectors)
-        }
-
   /** List of imports for a unit's root context
    *
    *  - if the unit is java defined, only `java.lang` is imported
@@ -110,9 +100,9 @@ trait Contexts { self: Analyzer =>
       unit.body match {
         case PackageDef(pid, stats) =>
           val imps = stats.collect { case imp: Import => imp }
-          generalRootImports.flatMap(dedupe(_, imps))
+          global.generalRootImports.flatMap(dedupe(_, imps))
 
-        case _ => generalRootImports
+        case _ => global.generalRootImports
       }
     }
   }
