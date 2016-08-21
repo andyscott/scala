@@ -28,6 +28,7 @@ import transform._
 import backend.{JavaPlatform, ScalaPrimitives}
 import backend.jvm.GenBCode
 import scala.language.postfixOps
+import scala.annotation.tailrec
 import scala.tools.nsc.ast.{TreeGen => AstTreeGen}
 import scala.tools.nsc.classpath._
 
@@ -412,6 +413,26 @@ class Global(var currentSettings: Settings, var reporter: Reporter)
   }
 
   import syntaxAnalyzer.{ UnitScanner, UnitParser, JavaUnitParser }
+
+  lazy val generalRootImports: List[Import] = {
+    def renderImportExpr(imp: Import): String = {
+      @tailrec def loop(tree: Tree, acc: List[Name]): List[Name] = tree match {
+        case Select(expr: Tree, name) => loop(expr, name :: acc)
+        case Ident(name) => name :: acc
+        case _ => acc
+      }
+      loop(imp.expr, Nil).mkString(".")
+    }
+
+    settings.Ypredef.value
+      .map(newUnitParser(_, "<flag-Ypredef>").parseRule(_.importExpr()))
+      .collect { case imp: Import =>
+        // I can't seem to figure out how to use the freshly parsed tree...
+        // Instead we get to recreate it
+        gen.mkImportFromSelector(
+          rootMirror.getPackage(renderImportExpr(imp)), imp.selectors)
+    }
+  }
 
   // !!! I think we're overdue for all these phase objects being lazy vals.
   // There's no way for a Global subclass to provide a custom typer
