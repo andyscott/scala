@@ -118,7 +118,7 @@ trait Contexts { self: Analyzer =>
   }
 
   def rootContext(unit: CompilationUnit, tree: Tree = EmptyTree, throwing: Boolean = false, checking: Boolean = false): Context = {
-    val rootImportsContext = (startContext /: rootImports(unit))((c, imp) => c.make(imp))
+    val rootImportsContext = (startContext /: rootImports(unit))((c, imp) => c.make(imp, isPredef = true))
 
     // there must be a scala.xml package when xml literals were parsed in this unit
     if (unit.hasXml && ScalaXmlPackage == NoSymbol)
@@ -459,7 +459,8 @@ trait Contexts { self: Analyzer =>
      */
     def make(tree: Tree = tree, owner: Symbol = owner,
              scope: Scope = scope, unit: CompilationUnit = unit,
-             reporter: ContextReporter = this.reporter): Context = {
+             reporter: ContextReporter = this.reporter,
+             isPredef: Boolean = false): Context = {
       val isTemplateOrPackage = tree match {
         case _: Template | _: PackageDef => true
         case _                           => false
@@ -481,9 +482,10 @@ trait Contexts { self: Analyzer =>
         else prefix
 
       // The blank canvas
-      val c = if (isImport)
-        new Context(tree, owner, scope, unit, this, reporter) with ImportContext
-      else
+      val c = if (isImport) {
+        if (isPredef) new Context(tree, owner, scope, unit, this, reporter) with PredefImportContext
+        else new Context(tree, owner, scope, unit, this, reporter) with ImportContext
+      } else
         new Context(tree, owner, scope, unit, this, reporter)
 
       // Fields that are directly propagated
@@ -1092,16 +1094,27 @@ trait Contexts { self: Analyzer =>
       if (symbolDepth < 0)
         symbolDepth = cx.depth
 
-      var impSym: Symbol = NoSymbol
-      var imports        = Context.this.imports
-      def imp1           = imports.head
-      def imp2           = imports.tail.head
-      def sameDepth      = imp1.depth == imp2.depth
-      def imp1Explicit   = imp1 isExplicitImport name
-      def imp2Explicit   = imp2 isExplicitImport name
+      var impSym: Symbol    = NoSymbol
+      var imports           = Context.this.imports
+      var hasBeenUnimported = false // we allow unimporting of Predef imports
+      def imp1              = imports.head
+      def imp2              = imports.tail.head
+      def sameDepth         = imp1.depth == imp2.depth
+      def imp1Explicit      = imp1 isExplicitImport name
+      def imp2Explicit      = imp2 isExplicitImport name
 
       def lookupImport(imp: ImportInfo, requireExplicit: Boolean) =
-        importedAccessibleSymbol(imp, name, requireExplicit, record = true) filter qualifies
+        if (hasBeenUnimported && imp.canUnimport) NoSymbol
+        else {
+          val symbol = importedAccessibleSymbol(imp, name, requireExplicit, record = true) filter qualifies
+          if (symbol != UnimportedSymbol) symbol
+          else {
+            hasBeenUnimported = true
+            // UnimportedSymbol is just a marker. We really want
+            // NoSymbol so that the search can properly continue
+            NoSymbol
+          }
+        }
 
       // Java: A single-type-import declaration d in a compilation unit c of package p
       // that imports a type named n shadows, throughout c, the declarations of:
@@ -1214,8 +1227,9 @@ trait Contexts { self: Analyzer =>
 
   /** A `Context` focussed on an `Import` tree */
   trait ImportContext extends Context {
+    protected def canUnimport: Boolean = false
     private val impInfo: ImportInfo = {
-      val info = new ImportInfo(tree.asInstanceOf[Import], outerDepth)
+      val info = new ImportInfo(tree.asInstanceOf[Import], outerDepth, canUnimport)
       if (settings.warnUnusedImport && !isRootImport) // excludes java.lang/scala/Predef imports
         allImportInfos(unit) ::= info
       info
@@ -1224,6 +1238,13 @@ trait Contexts { self: Analyzer =>
     override final def firstImport  = Some(impInfo)
     override final def isRootImport = !tree.pos.isDefined
     override final def toString     = super.toString + " with " + s"ImportContext { $impInfo; outer.owner = ${outer.owner} }"
+  }
+
+  /** A `Context` focussed on an predef `Import` tree. The ImportInfo is
+    * evictable, which means imports can be masked/removed from scope.
+    */
+  trait PredefImportContext extends ImportContext {
+    override def canUnimport = true
   }
 
   /** A reporter for use during type checking. It has multiple modes for handling errors.
@@ -1397,7 +1418,24 @@ trait Contexts { self: Analyzer =>
     protected def handleError(pos: Position, msg: String): Unit = onTreeCheckerError(pos, msg)
   }
 
-  class ImportInfo(val tree: Import, val depth: Int) {
+  /** A private marker symbol used for unimported imports `import foo.{ bar => _, _ }` */
+  private[this] final class UnimportedSymbol extends Symbol(null, NoPosition, UNIMPORTED_NAME) {
+    private[this] def dagNabbit =
+      abort("UnimportedSymbol has no working methods and is just a marker")
+    override type NameType = TermName
+    override type TypeOfClonedSymbol = UnimportedSymbol
+    override def asNameType(n: Name) = dagNabbit
+    override def rawname = UNIMPORTED_NAME
+    override def name = UNIMPORTED_NAME
+    override def existentialBound: Type = dagNabbit
+    override def cloneSymbolImpl(owner: Symbol, newFlags: Long) = dagNabbit
+    override def filter(cond: Symbol => Boolean) = this
+  }
+
+  private[this] final val UNIMPORTED_NAME: nme.NameType = "<unimported>"
+  private[this] lazy val UnimportedSymbol: UnimportedSymbol = new UnimportedSymbol
+
+  class ImportInfo(val tree: Import, val depth: Int, val canUnimport: Boolean = false) {
     def pos = tree.pos
     def posOf(sel: ImportSelector) = tree.pos withPoint sel.namePos
 
@@ -1434,8 +1472,10 @@ trait Contexts { self: Analyzer =>
         if (current.rename == name.toTermName)
           result = qual.tpe.nonLocalMember( // new to address #2733: consider only non-local members for imports
             if (name.isTypeName) current.name.toTypeName else current.name)
-        else if (current.name == name.toTermName)
-          renamed = true
+        else if (current.name == name.toTermName) {
+          if (current.rename == nme.WILDCARD) result = UnimportedSymbol
+          else renamed = true
+        }
         else if (current.name == nme.WILDCARD && !renamed && !requireExplicit)
           result = qual.tpe.nonLocalMember(name)
 
@@ -1451,7 +1491,9 @@ trait Contexts { self: Analyzer =>
       //      check inside the above loop, as I believe that
       //      this always represents a mistake on the part of
       //      the caller.
-      if (definitions isImportable result) result
+
+      if (result == UnimportedSymbol) result
+      else if (definitions isImportable result) result
       else NoSymbol
     }
     private def selectorString(s: ImportSelector): String = {
