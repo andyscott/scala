@@ -1086,20 +1086,20 @@ trait Contexts { self: Analyzer =>
 
       var impSym: Symbol    = NoSymbol
       var imports           = Context.this.imports
-      var hasBeenUnimported = false // we allow unimporting of Predef imports
       def imp1              = imports.head
       def imp2              = imports.tail.head
       def sameDepth         = imp1.depth == imp2.depth
       def imp1Explicit      = imp1 isExplicitImport name
       def imp2Explicit      = imp2 isExplicitImport name
+      var unimports         = scala.collection.mutable.Set.empty[(Symbol, Name)]
 
       def lookupImport(imp: ImportInfo, requireExplicit: Boolean) =
-        if (hasBeenUnimported && imp.canUnimport) NoSymbol
+        if (imp.canUnimport && unimports.contains((imp.tree.expr.symbol, name))) NoSymbol
         else {
           val symbol = importedAccessibleSymbol(imp, name, requireExplicit, record = true) filter qualifies
           if (symbol != UnimportedSymbol) symbol
           else {
-            hasBeenUnimported = true
+            unimports += imp.tree.expr.symbol -> name
             // UnimportedSymbol is just a marker. We really want
             // NoSymbol so that the search can properly continue
             NoSymbol
