@@ -1,5 +1,5 @@
 
 scala> :implicits
-No implicits have been imported other than those in Predef.
+No implicits have been imported other than java.lang._, scala._, scala.Predef._
 
 scala> :quit
