@@ -1,24 +1,34 @@
 
 scala> 1
+[init] warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res0: Int = 1
 
 scala> 1.0
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res1: Double = 1.0
 
 scala> ()
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 
 scala> "abc"
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res3: String = abc
 
 scala> (1, 2)
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res4: (Int, Int) = (1,2)
 
 scala> 
 
 scala> { import scala.Predef.ArrowAssoc; 1 -> 2 }
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res5: (Int, Int) = (1,2)
 
 scala> { import scala.Predef.ArrowAssoc; 1 → 2 }
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res6: (Int, Int) = (1,2)
 
 scala> 1 -> 2
@@ -34,9 +44,11 @@ scala> 1 → 2
 scala> 
 
 scala> val answer = 42
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 answer: Int = 42
 
 scala> { import scala.StringContext; s"answer: $answer" }
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res9: String = answer: 42
 
 scala> s"answer: $answer"
@@ -47,11 +59,13 @@ scala> s"answer: $answer"
 scala> 
 
 scala> "abc" + true
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res11: String = abctrue
 
 scala> 
 
 scala> { import scala.Predef.any2stringadd; true + "abc" }
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res12: String = trueabc
 
 scala> true + "abc"
@@ -62,15 +76,19 @@ scala> true + "abc"
 scala> 
 
 scala> var x = 10
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 x: Int = 10
 
 scala> var y = 11
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 y: Int = 11
 
 scala> x = 12
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 x: Int = 12
 
 scala> y = 13
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 y: Int = 13
 
 scala> 
@@ -79,12 +97,14 @@ scala> 2 ; 3
 <console>:11: warning: a pure expression does nothing in statement position; multiline expressions may require enclosing parentheses
        2 ;;
        ^
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res14: Int = 3
 
 scala> { 2 ; 3 }
 <console>:12: warning: a pure expression does nothing in statement position; multiline expressions might require enclosing parentheses
        { 2 ; 3 }
          ^
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res15: Int = 3
 
 scala> 5 ; 10 ; case object Cow ; 20 ; class Moo { override def toString = "Moooooo" } ; 30 ; def
@@ -104,6 +124,7 @@ bippy = {
 <console>:11: warning: a pure expression does nothing in statement position; multiline expressions may require enclosing parentheses
        5 ; 10 ; case object Cow ; 20 ; class Moo { override def toString = "Moooooo" } ; 30 ; def
                                                                                          ^
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 defined object Cow
 defined class Moo
 bippy: Int
@@ -112,34 +133,43 @@ res16: Int = 105
 scala> 
 
 scala> object Bovine { var x: scala.List[_] = null } ; case class Ruminant(x: scala.Int) ; bippy * bippy * bippy
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 defined object Bovine
 defined class Ruminant
 res17: Int = 216
 
 scala> Bovine.x = scala.List(Ruminant(5), Cow, new Moo)
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 Bovine.x: List[Any] = List(Ruminant(5), Cow, Moooooo)
 
 scala> Bovine.x
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res18: List[Any] = List(Ruminant(5), Cow, Moooooo)
 
 scala> 
 
 scala> (2)
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res19: Int = 2
 
 scala> (2 + 2)
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res20: Int = 4
 
 scala> ((2 + 2))
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res21: Int = 4
 
 scala>   ((2 + 2))
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res22: Int = 4
 
 scala>   (  (2 + 2))
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res23: Int = 4
 
 scala>   (  (2 + 2 )  )
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res24: Int = 4
 
 scala> 5 ;   (  (2 + 2 )  ) ; ((5))
@@ -149,15 +179,19 @@ scala> 5 ;   (  (2 + 2 )  ) ; ((5))
 <console>:11: warning: a pure expression does nothing in statement position; multiline expressions may require enclosing parentheses
        5 ;   (  (2 + 2 )  ) ;;
                    ^
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res25: Int = 5
 
 scala> (((2 + 2)), ((2 + 2)))
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res26: (Int, Int) = (4,4)
 
 scala> (((2 + 2)), ((2 + 2)), 2)
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res27: (Int, Int, Int) = (4,4,2)
 
 scala> (((((2 + 2)), ((2 + 2)), 2).productIterator ++ scala.Iterator(3)).mkString)
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res28: String = 4423
 
 scala> 
@@ -169,39 +203,47 @@ scala> 55 ; ((2 + 2)) ; (1, 2, 3)
 <console>:11: warning: a pure expression does nothing in statement position; multiline expressions may require enclosing parentheses
        55 ; ((2 + 2)) ;;
                 ^
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res29: (Int, Int, Int) = (1,2,3)
 
 scala> 55 ; (x: scala.Int) => x + 1 ; () => ((5))
 <console>:12: warning: a pure expression does nothing in statement position; multiline expressions may require enclosing parentheses
        55 ; (x: scala.Int) => x + 1 ;;
        ^
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res30: () => Int = <function0>
 
 scala> 
 
 scala> () => 5
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res31: () => Int = <function0>
 
 scala> 55 ; () => 5
 <console>:11: warning: a pure expression does nothing in statement position; multiline expressions may require enclosing parentheses
        55 ;;
        ^
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res32: () => Int = <function0>
 
 scala> () => { class X ; new X }
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res33: () => AnyRef = <function0>
 
 scala> 
 
 scala> def foo(x: scala.Int)(y: scala.Int)(z: scala.Int) = x+y+z
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 foo: (x: Int)(y: Int)(z: Int)Int
 
 scala> foo(5)(10)(15)+foo(5)(10)(15)
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res34: Int = 60
 
 scala> 
 
 scala> scala.List(1) ++ scala.List('a')
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res35: List[AnyVal] = List(1, a)
 
 scala> 
@@ -214,9 +256,11 @@ EOF
 
 // Exiting paste mode, now interpreting.
 
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 defined class C
 
 scala> new C().c
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res36: Int = 42
 
 scala> :paste <| EOF
@@ -227,9 +271,11 @@ EOF
 
 // Exiting paste mode, now interpreting.
 
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 defined class D
 
 scala> new D().d
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res37: Int = 42
 
 scala> 
@@ -250,27 +296,34 @@ EOF
 
 // Exiting paste mode, now interpreting.
 
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 defined class Dingus
 defined object Dingus
 
 scala> val x = (new Dingus).y
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 x: Int = 110
 
 scala> 
 
 scala> val x1 = 1
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 x1: Int = 1
 
 scala> val x2 = 2
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 x2: Int = 2
 
 scala> val x3 = 3
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 x3: Int = 3
 
 scala> case class BippyBungus()
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 defined class BippyBungus
 
 scala> x1 + x2 + x3
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res38: Int = 6
 
 scala> :reset
@@ -344,6 +397,7 @@ scala> x1 + x2 + x3
                  ^
 
 scala> val x1 = 4
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 x1: Int = 4
 
 scala> new BippyBungus
@@ -352,9 +406,11 @@ scala> new BippyBungus
            ^
 
 scala> class BippyBungus() { def f = 5 }
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 defined class BippyBungus
 
 scala> { new BippyBungus ; x1 }
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res2: Int = 4
 
 scala> :quit

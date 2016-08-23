@@ -1,23 +1,33 @@
 
 scala> case class K(s: java.lang.String)
+[init] warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 defined class K
 
 scala> class C { implicit val k: K = K("OK?"); override def toString = "C(" + k.toString + ")" }
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 defined class C
 
 scala> val c = new C
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 c: C = C(K(OK?))
 
 scala> import c.k
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 import c.k
 
 scala> scala.Predef.implicitly[K]
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res0: K = K(OK?)
 
 scala> val k = 42
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 k: Int = 42
 
 scala> k                 // was K(OK?)
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
 res1: Int = 42
 
 scala> :quit

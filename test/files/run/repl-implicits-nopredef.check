@@ -1,5 +1,8 @@
 
 scala> :implicits
-No implicits have been imported.
+[init] warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
+warning: there was one deprecation warning; for details, enable `:setting -deprecation' or `:replay -deprecation'
+No implicits have been imported other than java.lang._, scala._
 
 scala> :quit
