@@ -415,23 +415,24 @@ class Global(var currentSettings: Settings, var reporter: Reporter)
   import syntaxAnalyzer.{ UnitScanner, UnitParser, JavaUnitParser }
 
   lazy val generalRootImports: List[Import] = {
-    def renderImportExpr(imp: Import): String = {
+
+    def resolveSymbol(imp: Import): Symbol = {
       @tailrec def loop(tree: Tree, acc: List[Name]): List[Name] = tree match {
         case Select(expr: Tree, name) => loop(expr, name :: acc)
         case Ident(name) => name :: acc
         case _ => acc
       }
-      loop(imp.expr, Nil).mkString(".")
+      loop(imp.expr, Nil).foldLeft(RootClass: Symbol) { (parent, name) =>
+        val s = parent.info member name
+        if (s != NoSymbol) s
+        else abort(s"Unable to find $name in $parent for predef import $imp")
+      }
     }
 
     settings.Ypredef.value
       .map(newUnitParser(_, "<flag-Ypredef>").parseRule(_.importExpr()))
       .collect { case imp: Import =>
-        // I can't seem to figure out how to use the freshly parsed tree...
-        // Instead we get to recreate it
-        gen.mkImportFromSelector(
-          rootMirror.getPackage(renderImportExpr(imp)), imp.selectors)
-    }
+        gen.mkImportFromSelector(resolveSymbol(imp), imp.selectors) }
   }
 
   // !!! I think we're overdue for all these phase objects being lazy vals.
