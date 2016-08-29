@@ -83,32 +83,71 @@ trait Contexts { self: Analyzer =>
     if (unit.isJava) gen.mkWildcardImport(JavaLangPackage) :: Nil
     else {
 
-      /** Cleanup import `imp` such that any selectors covered by
-        * any imports in `parents` are removed.
-        */
-      def dedupe(imp: Import, parents: List[Import]): Option[Import] = {
-        val parentsToCheck = parents.filter(parent =>
-          parent.expr equalsStructure imp.expr)
-        val selectors = imp.selectors.filterNot(rs =>
-          parentsToCheck.exists(_.selectors.exists(ps =>
-            ps.name == rs.name && ps.rename == rs.rename)))
-
-        if (selectors.isEmpty) None
-        else Some(imp.copy(selectors = selectors).copyAttrs(imp))
+      // This same code is also in Global and could be shared
+      def nameImport(imp: Import): List[Name] = {
+        @tailrec def loop(tree: Tree, acc: List[Name]): List[Name] = tree match {
+          case Select(expr: Tree, name) => loop(expr, name :: acc)
+          case Ident(name) => name :: acc
+          case _ => acc
+        }
+        loop(imp.expr, Nil)
       }
 
-      unit.body match {
-        case PackageDef(pid, stats) =>
-          val imps = stats.collect { case imp: Import => imp }
-          global.generalRootImports.flatMap(dedupe(_, imps))
+      // Looks up a particular import symbol in a given context
+      def resolveImportSymbol(imp: Import, context: Context): Symbol =
+        nameImport(imp) match {
+          case head :: tail =>
+            val headSymbol = context.lookupSymbol(head, _ => true).symbol
+            if (headSymbol == NoSymbol)
+              abort(s"Unable to find $head for import $imp while checking predefs")
+            tail.foldLeft(headSymbol) { (parent, name) =>
+              val s = parent.info member name
+              if (s != NoSymbol) s
+              else abort(s"Unable to find $name in $parent for import $imp while checking predefs")
+            }
+          case Nil => NoSymbol
+        }
 
-        case _ => global.generalRootImports
+      // If the unit body has a predef among its leading imports, then the
+      // predef is _not_ imported.
+      def noPredefIfImported(predef: Import, importSymbols: List[Symbol]): Option[Import] =
+        if (importSymbols contains predef.expr.symbol) None
+        else Some(predef)
+
+      // Collects the leading imports in a given unit body.
+      //
+      // This method should return the list of imports that were
+      // checked in the original `noPredefImportImport` method in
+      // 2.11.8 and earlier. */
+      def leadingImports(body: Tree): List[Import] = {
+        @tailrec def loop(rem: List[Tree], acc: List[Import]): List[Import] = rem match {
+          case tree :: tail => tree match {
+            case PackageDef(_, stats) => loop(stats ::: tail, acc)
+            case imp: Import => loop(tail, imp :: acc)
+            case _ => loop(tail, acc)
+          }
+          case Nil => acc
+        }
+        loop(body :: Nil, Nil)
       }
+
+      // This is a context with just the predef imports. It's needed
+      // for resolving the symbols of leading imports so we can omit
+      // predefs in certain situations.
+      val predefContext =
+        global.generalRootImports.foldLeft(startContext)((c, imp) => c.make(imp, isPredef = true))
+
+      val imps = leadingImports(unit.body)
+      val importSymbols = imps.map(resolveImportSymbol(_, predefContext))
+
+      global.generalRootImports
+        .flatMap(noPredefIfImported(_, importSymbols))
     }
   }
 
   def rootContext(unit: CompilationUnit, tree: Tree = EmptyTree, throwing: Boolean = false, checking: Boolean = false): Context = {
-    val rootImportsContext = (startContext /: rootImports(unit))((c, imp) => c.make(imp, isPredef = true))
+    val rootImportsContext =
+      rootImports(unit).foldLeft(startContext)((c, imp) => c.make(imp, isPredef = true))
 
     // there must be a scala.xml package when xml literals were parsed in this unit
     if (unit.hasXml && ScalaXmlPackage == NoSymbol)
