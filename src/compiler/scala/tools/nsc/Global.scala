@@ -435,6 +435,16 @@ class Global(var currentSettings: Settings, var reporter: Reporter)
         gen.mkImportFromSelector(resolveSymbol(imp), imp.selectors) }
   }
 
+  lazy val leadingImportNamerContext = {
+    val c0 = analyzer.NoContext.make(
+      Template(List(), noSelfType, List()).setSymbol(NoSymbol).setType(NoType),
+      rootMirror.RootClass,
+      rootMirror.RootClass.info.decls)
+    c0.initRootContext(false, false)
+    generalRootImports.foldLeft(c0)((c, imp) =>
+      c.make(imp, isPredef = true))
+  }
+
   // !!! I think we're overdue for all these phase objects being lazy vals.
   // There's no way for a Global subclass to provide a custom typer
   // despite the existence of a "def newTyper(context: Context): Typer"
