@@ -83,43 +83,12 @@ trait Contexts { self: Analyzer =>
     if (unit.isJava) gen.mkWildcardImport(JavaLangPackage) :: Nil
     else {
 
-      // This same code is also in Global and could be shared
-      def nameImport(imp: Import): List[Name] = {
-        @tailrec def loop(tree: Tree, acc: List[Name]): List[Name] = tree match {
-          case Select(expr: Tree, name) => loop(expr, name :: acc)
-          case Ident(name) => name :: acc
-          case _ => acc
-        }
-        loop(imp.expr, Nil)
-      }
-
-      // Looks up a particular import symbol in a given context
-      def resolveImportSymbol(imp: Import, context: Context): Symbol =
-        nameImport(imp) match {
-          case head :: tail =>
-            val headSymbol = context.lookupSymbol(head, _ => true).symbol
-            if (headSymbol == NoSymbol)
-              abort(s"Unable to find $head for import $imp while checking predefs")
-            tail.foldLeft(headSymbol) { (parent, name) =>
-              val s = parent.info member name
-              if (s != NoSymbol) s
-              else abort(s"Unable to find $name in $parent for import $imp while checking predefs")
-            }
-          case Nil => NoSymbol
-        }
-
-      // If the unit body has a predef among its leading imports, then the
-      // predef is _not_ imported.
-      def noPredefIfImported(predef: Import, importSymbols: List[Symbol]): Option[Import] =
-        if (importSymbols contains predef.expr.symbol) None
-        else Some(predef)
-
       // Collects the leading imports in a given unit body.
       //
       // This method should return the list of imports that were
       // checked in the original `noPredefImportImport` method in
       // 2.11.8 and earlier. */
-      def leadingImports(body: Tree): List[Import] = {
+      def collectLeadingImports(body: Tree): List[Import] = {
         @tailrec def loop(rem: List[Tree], acc: List[Import]): List[Import] = rem match {
           case tree :: tail => tree match {
             case PackageDef(_, stats) => loop(stats ::: tail, acc)
@@ -128,20 +97,27 @@ trait Contexts { self: Analyzer =>
           }
           case Nil => acc
         }
-        loop(body :: Nil, Nil)
+        loop(body :: Nil, Nil).reverse
       }
 
-      // This is a context with just the predef imports. It's needed
+      val leadingImports = collectLeadingImports(unit.body)
+      // This is a context with just the leading imports. It's needed
       // for resolving the symbols of leading imports so we can omit
       // predefs in certain situations.
-      val predefContext =
-        global.generalRootImports.foldLeft(startContext)((c, imp) => c.make(imp, isPredef = true))
 
-      val imps = leadingImports(unit.body)
-      val importSymbols = imps.map(resolveImportSymbol(_, predefContext))
+      val namedLeadingImports = leadingImports.map(_.duplicate)
+      global.analyzer
+        .newNamer(global.leadingImportNamerContext)
+        .enterSyms(namedLeadingImports)
+
+      // If the unit body has a predef among its leading imports, then the
+      // predef is _not_ imported.
+      def noPredefIfImported(predef: Import, importSymbols: List[Symbol]): Option[Import] =
+        if (importSymbols contains predef.expr.symbol) None
+        else Some(predef)
 
       global.generalRootImports
-        .flatMap(noPredefIfImported(_, importSymbols))
+        .flatMap(noPredefIfImported(_, namedLeadingImports.map(_.expr.symbol)))
     }
   }
 
