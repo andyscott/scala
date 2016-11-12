@@ -100,81 +100,34 @@ trait Contexts { self: Analyzer =>
         loop(body :: Nil, Nil).reverse
       }
 
-      val leadingImports = collectLeadingImports(unit.body)
-      // This is a context with just the leading imports. It's needed
-      // for resolving the symbols of leading imports so we can omit
-      // predefs in certain situations.
-
-      val namedLeadingImports = leadingImports.map(_.duplicate)
-      //val namer = global.analyzer
-//        .newNamer(global.leadingImportNamerContext)
-      //.enterSyms(namedLeadingImports)
-
-      println("")
-      println("??? " + isPastTyper)
-
       def resolveSymbol(imp: Import): Symbol = {
-        @tailrec def loop(tree: Tree, acc: List[Name]): List[Name] = tree match {
-          case Select(expr: Tree, name) => loop(expr, name :: acc)
+        @tailrec def expandNames(tree: Tree, acc: List[Name]): List[Name] = tree match {
+          case Select(expr: Tree, name) => expandNames(expr, name :: acc)
           case Ident(name) => name :: acc
           case _ => acc
         }
-        loop(imp.expr, Nil).foldLeft(RootClass: Symbol) { (parent, name) =>
-          val s = parent.info member name
-          if (s != NoSymbol) s
-          else abort(s"Unable to find $name in $parent for predef import $imp")
+        expandNames(imp.expr, Nil) match {
+          case head :: tail =>
+            val start = leadingImportNamerContext.lookupSymbol(head, _ => true).symbol
+            tail.foldLeft(start)((parent, name) => parent.info member name)
+          case Nil => NoSymbol
         }
       }
 
-      namedLeadingImports.foreach { imp =>
-        val sym = resolveSymbol(imp)
-        println("HMMM! " + sym)
-        imp.symbol = sym
-      }
+      val leadingImports = collectLeadingImports(unit.body)
+      val namedLeadingImports = leadingImports.map(_.duplicate)
 
-
-      /*
-      namedLeadingImports.foldLeft(namer){(namer, imp) =>
-        val symbol = namer.createImportSymbol(imp)
-        println(">>> " + symbol)
-        println("??? " + symbol.name)
-        //namer.assignSymbol(imp)
-
-
-        try {
-          val WAT = typer.typedQualifier(imp.expr)
-          println("WAT " + WAT)
-        }
-        catch { case e => }
-        println("GAH " + resolveSymbol(imp))
-        println("GAg " + resolveSymbol(imp).name)
-        global.analyzer.newNamer(namer.context.make(imp))
-      }
-       */
-
-
-
-      println("Unit: " + unit.source)
-      println("gen root import %% " + global.generalRootImports)
-      println("leading imports >> " + namedLeadingImports)
-      println("                $$ " + namedLeadingImports.map(_.expr))
-      println("                ## " + namedLeadingImports.map(_.expr.symbol))
+      namedLeadingImports.foreach(imp =>
+        imp.expr.symbol = resolveSymbol(imp))
 
       // If the unit body has a predef among its leading imports, then the
       // predef is _not_ imported.
-      def noPredefIfImported(predef: Import, importSymbols: List[Symbol]): Option[Import] = {
-        //println(predef + " vs " + importSymbols)
-
+      def noPredefIfImported(predef: Import, importSymbols: List[Symbol]): Option[Import] =
         if (importSymbols contains predef.expr.symbol) None
         else Some(predef)
-      }
 
-      val res = global.generalRootImports
+      global.generalRootImports
         .flatMap(noPredefIfImported(_, namedLeadingImports.map(_.expr.symbol)))
-
-      println("predefs :: " + res)
-
-      res
     }
   }
 
