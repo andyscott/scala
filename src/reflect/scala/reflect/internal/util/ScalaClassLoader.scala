@@ -8,7 +8,6 @@ package reflect.internal.util
 
 import scala.language.implicitConversions
 
-import java.lang.{ ClassLoader => JClassLoader }
 import java.lang.reflect.Modifier
 import java.net.{ URLClassLoader => JURLClassLoader }
 import java.net.URL
@@ -25,7 +24,7 @@ trait HasClassPath {
 /** A wrapper around java.lang.ClassLoader to lower the annoyance
  *  of java reflection.
  */
-trait ScalaClassLoader extends JClassLoader {
+trait ScalaClassLoader extends ClassLoader {
   /** Executing an action with this classloader as context classloader */
   def asContext[T](action: => T): T = {
     val saved = contextLoader
@@ -111,14 +110,14 @@ object ScalaClassLoader {
    *  and translates java.net.URLClassLoaders into scala URLClassLoaders.
    *  Otherwise creates a new wrapper.
    */
-  implicit def apply(cl: JClassLoader): ScalaClassLoader = cl match {
+  implicit def apply(cl: ClassLoader): ScalaClassLoader = cl match {
     case cl: ScalaClassLoader => cl
     case cl: JURLClassLoader  => new URLClassLoader(cl.getURLs.toSeq, cl.getParent)
-    case _                    => new JClassLoader(cl) with ScalaClassLoader
+    case _                    => new ClassLoader(cl) with ScalaClassLoader
   }
   def contextLoader = apply(Thread.currentThread.getContextClassLoader)
-  def appLoader     = apply(JClassLoader.getSystemClassLoader)
-  def setContext(cl: JClassLoader) =
+  def appLoader     = apply(ClassLoader.getSystemClassLoader)
+  def setContext(cl: ClassLoader) =
     Thread.currentThread.setContextClassLoader(cl)
   def savingContextLoader[T](body: => T): T = {
     val saved = contextLoader
@@ -126,7 +125,7 @@ object ScalaClassLoader {
     finally setContext(saved)
   }
 
-  class URLClassLoader(urls: Seq[URL], parent: JClassLoader)
+  class URLClassLoader(urls: Seq[URL], parent: ClassLoader)
       extends JURLClassLoader(urls.toArray, parent)
          with ScalaClassLoader
          with HasClassPath {

@@ -14,7 +14,6 @@ import scala.collection.mutable.WrappedArray
 import scala.collection.immutable.{ StringLike, NumericRange }
 import scala.collection.generic.{ Sorted, IsTraversableLike }
 import scala.reflect.{ ClassTag, classTag }
-import java.lang.{ Class => jClass }
 
 import java.lang.reflect.{ Method => JMethod }
 
@@ -26,7 +25,7 @@ object ScalaRunTime {
   def isArray(x: Any, atLevel: Int = 1): Boolean =
     x != null && isArrayClass(x.getClass, atLevel)
 
-  private def isArrayClass(clazz: jClass[_], atLevel: Int): Boolean =
+  private def isArrayClass(clazz: Class[_], atLevel: Int): Boolean =
     clazz.isArray && (atLevel == 1 || isArrayClass(clazz.getComponentType, atLevel - 1))
 
   // A helper method to make my life in the pattern matcher a lot easier.
@@ -35,7 +34,7 @@ object ScalaRunTime {
 
   /** Return the class object representing an array with element class `clazz`.
    */
-  def arrayClass(clazz: jClass[_]): jClass[_] = {
+  def arrayClass(clazz: Class[_]): Class[_] = {
     // newInstance throws an exception if the erasure is Void.TYPE. see SI-5680
     if (clazz == java.lang.Void.TYPE) classOf[Array[Unit]]
     else java.lang.reflect.Array.newInstance(clazz, 0).getClass
@@ -45,8 +44,8 @@ object ScalaRunTime {
    *  e.g., classOf[int], not classOf[java.lang.Integer].  The compiler
    *  rewrites expressions like 5.getClass to come here.
    */
-  def anyValClass[T <: AnyVal : ClassTag](value: T): jClass[T] =
-    classTag[T].runtimeClass.asInstanceOf[jClass[T]]
+  def anyValClass[T <: AnyVal : ClassTag](value: T): Class[T] =
+    classTag[T].runtimeClass.asInstanceOf[Class[T]]
 
   /** Retrieve generic array element */
   def array_apply(xs: AnyRef, idx: Int): Any = {

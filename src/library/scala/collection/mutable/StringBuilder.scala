@@ -10,7 +10,7 @@ package scala
 package collection
 package mutable
 
-import java.lang.{ StringBuilder => JavaStringBuilder }
+import java.lang.{ StringBuilder => JavaStringBuilder, _ }
 import scala.annotation.migration
 import immutable.StringLike
 

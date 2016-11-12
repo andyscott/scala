@@ -6,7 +6,6 @@
 package scala
 package reflect.runtime
 
-import java.lang.{Class => jClass}
 import java.lang.reflect.{ Method, InvocationTargetException, UndeclaredThrowableException }
 import scala.reflect.internal.util.AbstractFileClassLoader
 import scala.reflect.io._
@@ -81,11 +80,11 @@ object ReflectionUtils {
   }
 
   object PrimitiveOrArray {
-    def unapply(jclazz: jClass[_]) = jclazz.isPrimitive || jclazz.isArray
+    def unapply(clazz: Class[_]) = clazz.isPrimitive || clazz.isArray
   }
 
-  class EnclosedIn[T](enclosure: jClass[_] => T) {
-    def unapply(jclazz: jClass[_]): Option[T] = Option(enclosure(jclazz))
+  class EnclosedIn[T](enclosure: Class[_] => T) {
+    def unapply(clazz: Class[_]): Option[T] = Option(enclosure(clazz))
   }
 
   object EnclosedInMethod extends EnclosedIn(_.getEnclosingMethod)
@@ -162,4 +161,3 @@ object ReflectionUtils {
     NoAbstractFile
   }
 }
-
