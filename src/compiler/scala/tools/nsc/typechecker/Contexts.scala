@@ -99,8 +99,63 @@ trait Contexts { self: Analyzer =>
   }
 
 
+  // Collects the leading imports in a given unit body.
+  //
+  // This method should return the list of imports that's
+  // checked in `noPredefImportImport`
+  //
+  private[this] def collectLeadingImports(body: Tree): List[Import] = {
+    @tailrec def loop(rem: List[Tree], acc: List[Import]): List[Import] = rem match {
+      case tree :: tail => tree match {
+        case PackageDef(_, stats) => loop(stats ::: tail, acc)
+        case imp: Import => loop(tail, imp :: acc)
+        case _ => loop(tail, acc)
+      }
+      case Nil => acc
+    }
+    loop(body :: Nil, Nil).reverse
+  }
+
+  def resolveSymbol(tree0: Tree, context: Context): Symbol = {
+    @tailrec def expandNames(tree: Tree, acc: List[Name]): List[Name] = tree match {
+      case Select(expr: Tree, name) => expandNames(expr, name :: acc)
+      case Ident(name) => name :: acc
+      case _ => acc
+    }
+    expandNames(tree0, Nil) match {
+      case head :: tail =>
+        try {
+          val start = context.lookupSymbol(head, _ => true).symbol
+          tail.foldLeft(start)((parent, name) => parent.info member name)
+        } catch { case _: Throwable => NoSymbol }
+      case Nil => NoSymbol
+    }
+  }
+
+  def localPredefImports(unit: CompilationUnit): List[Import] = {
+    val leadingImports = collectLeadingImports(unit.body)
+    val leadingImportsContext =
+      globalRootImports.foldLeft(startContext)((c, imp) => c.make(imp))
+
+    val (_, rootImports) = leadingImports
+      .foldLeft((leadingImportsContext, globalPredefImports)) { (acc, imp) =>
+        val c = acc._1
+        val sym = resolveSymbol(imp.expr, c)
+        val filteredRootImports = acc._2.filter(_.expr.symbol != sym)
+        (c.make(imp), filteredRootImports)
+      }
+
+    rootImports
+  }
+
   def rootContext(unit: CompilationUnit, tree: Tree = EmptyTree, throwing: Boolean = false, checking: Boolean = false): Context = {
-    val rootImportsContext = (startContext /: rootImports(unit))((c, sym) => c.make(gen.mkWildcardImport(sym)))
+    //val rootImportsContext = (startContext /: rootImports(unit))((c, sym) => c.make(gen.mkWildcardImport(sym)))
+    // TODO: Feature flag this based on the user setting -Ypredef/-Ysysdef
+    val rootImports =
+      if (unit.isJava) RootImports.javaList.map(gen.mkWildcardImport)
+      else (globalSysdefImports ::: localPredefImports(unit))
+    val rootImportsContext =
+      rootImports.foldLeft(startContext)((c, imp) => c.make(imp))
 
     // there must be a scala.xml package when xml literals were parsed in this unit
     if (unit.hasXml && ScalaXmlPackage == NoSymbol)
