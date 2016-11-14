@@ -149,13 +149,18 @@ trait Contexts { self: Analyzer =>
   }
 
   def rootContext(unit: CompilationUnit, tree: Tree = EmptyTree, throwing: Boolean = false, checking: Boolean = false): Context = {
-    //val rootImportsContext = (startContext /: rootImports(unit))((c, sym) => c.make(gen.mkWildcardImport(sym)))
-    // TODO: Feature flag this based on the user setting -Ypredef/-Ysysdef
-    val rootImports =
-      if (unit.isJava) RootImports.javaList.map(gen.mkWildcardImport)
-      else (globalSysdefImports ::: localPredefImports(unit))
-    val rootImportsContext =
-      rootImports.foldLeft(startContext)((c, imp) => c.make(imp))
+
+    val localRootImports =
+      if (settings.Ysysdef.isSetByUser || settings.Ypredef.isSetByUser) {
+        // 'new' feature flagged implementation
+        if (unit.isJava) RootImports.javaList.map(gen.mkWildcardImport)
+        else (globalSysdefImports ::: localPredefImports(unit))
+      } else
+        // original implementation
+        rootImports(unit).map(gen.mkWildcardImport)
+
+    val localRootImportContext =
+      localRootImports.foldLeft(startContext)((c, imp) => c.make(imp))
 
     // there must be a scala.xml package when xml literals were parsed in this unit
     if (unit.hasXml && ScalaXmlPackage == NoSymbol)
@@ -165,8 +170,8 @@ trait Contexts { self: Analyzer =>
     // We detect `scala-xml` by looking for `scala.xml.TopScope` and
     // inject the equivalent of `import scala.xml.{TopScope => $scope}`
     val contextWithXML =
-      if (!unit.hasXml || ScalaXmlTopScope == NoSymbol) rootImportsContext
-      else rootImportsContext.make(gen.mkImport(ScalaXmlPackage, nme.TopScope, nme.dollarScope))
+      if (!unit.hasXml || ScalaXmlTopScope == NoSymbol) localRootImportContext
+      else localRootImportContext.make(gen.mkImport(ScalaXmlPackage, nme.TopScope, nme.dollarScope))
 
     val c = contextWithXML.make(tree, unit = unit)
 
